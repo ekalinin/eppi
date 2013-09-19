@@ -4,12 +4,11 @@
 
 %% API
 -export([
-         start_link/0
-         % get_packages/0,
-         % get_packages/1,
-         % get_files/0,
-         % get_files/1,
-         %
+         start_link/0,
+         get_packages/0,
+         get_packages/1,
+         get_files/0,
+         get_files/1
         ]).
 
 %% gen_server callbacks
@@ -33,9 +32,14 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 get_packages() ->
-    get_packages(nodes()).
+    get_packages(node()).
 get_packages(Node) ->
     gen_server:call({?SERVER, Node}, {get_packages}).
+
+get_files() ->
+    get_files(node()).
+get_files(Node) ->
+    gen_server:call({?SERVER, Node}, {get_files}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -62,8 +66,10 @@ handle_cast({start_server, PackagesDir}, State) ->
     case filelib:is_dir(PackagesDir) of
         true ->
             % Get packages — each directory name
+            % TODO: remove base directory from path
             Packages = get_all_directories(PackagesDir),
             % Get files
+            % TODO: walk subdirectories
             Files = get_all_files(PackagesDir),
             % return stats 
             {noreply, State#state{packages = Packages, files = Files}};
