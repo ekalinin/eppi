@@ -1,0 +1,12 @@
+*.swp
+
+deps/
+ebin/
+log/
+erl_crash.dump
+
+packages/
+packages-old/
+
+TODO
+help

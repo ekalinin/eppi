@@ -1,0 +1,16 @@
+{application, eppi,
+ [
+  {description, "Eppi - Erlang based Python Package Index"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  lager,
+                  crypto,
+                  ranch,
+                  cowboy
+                 ]},
+  {mod, { eppi_app, []}},
+  {env, [{config, "eppi.config"}]}
+ ]}.
