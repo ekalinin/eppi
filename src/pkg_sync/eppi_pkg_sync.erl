@@ -1,4 +1,4 @@
--module(eppi_pkg_srv_sync).
+-module(eppi_pkg_sync).
 
 -behaviour(gen_server).
 
@@ -6,8 +6,7 @@
 -export([
          start_link/0,
          sync_from_pypi/1,
-         sync_from_node/2,
-         new_file_notify/1
+         sync_from_node/2
         ]).
 
 %% gen_server callbacks
@@ -29,9 +28,6 @@ sync_from_pypi(FileName) ->
     ok.
 
 sync_from_node(FileName, Node) ->
-    ok.
-
-new_file_notify(FileName) ->
     ok.
 
 %%%===================================================================

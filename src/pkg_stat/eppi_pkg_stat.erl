@@ -1,4 +1,4 @@
--module(eppi_pkg_srv_stat).
+-module(eppi_pkg_stat).
 
 -behaviour(gen_server).
 
@@ -66,6 +66,8 @@ handle_cast({start_server, PackagesDir}, State) ->
         true ->
             Versions = get_local_versions(PackagesDir),
             lager:info(" * Found versions: ~p", [length(Versions)]),
+            ok = notify_i_have(Versions),
+            ok = notify_what_is_yours(),
             % return
             {noreply, State#state{versions = Versions}};
         false ->
@@ -73,6 +75,7 @@ handle_cast({start_server, PackagesDir}, State) ->
             ok = filelib:ensure_dir(PackagesDir),
             ok = file:make_dir(PackagesDir),
             lager:info(" * Directory created."),
+            ok = notify_what_is_yours(),
             % return
             {noreply, State#state{versions = []}}
     end;
@@ -120,3 +123,12 @@ get_local_versions(Dir, Package) ->
 %        filelib:wildcard(Path ++ "/*")
 %    ),
 %    lists:map(fun filename:basename/1, Packages).
+
+notify_new(FileName) ->
+    ok.
+
+notify_i_have(Files) ->
+    ok.
+
+notify_what_is_yours() ->
+    ok.

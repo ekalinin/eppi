@@ -1,4 +1,4 @@
--module(eppi_pkg_sup).
+-module(eppi_pkg_stat_sup).
 
 -behaviour(supervisor).
 
@@ -14,19 +14,10 @@ start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
 init([]) ->
-
     Children = [
-
-        % Stats server
-        {eppi_pkg_srv_stat,
-            {eppi_pkg_srv_stat, start_link, []},
-            permanent, 2000, worker, []},
-
-        % Sync server
-        {eppi_pkg_srv_sync,
-            {eppi_pkg_srv_sync, start_link, []},
-            permanent, 2000, worker, []}
+        {eppi_pkg_stat,
+            {eppi_pkg_stat, start_link, []},
+            permanent, 2000, worker, [eppi_pkg_stat]}
     ],
-
     RestartStrategy = {one_for_one, 0, 1},
     {ok, {RestartStrategy, Children}}.

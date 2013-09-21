@@ -19,22 +19,24 @@ start_link() ->
 %% Supervisor callbacks
 %% ===================================================================
 init([]) ->
-
-    % Root supervisor childrens
     Childrens = [
-
-        % start package server
-        {eppi_pkg_sup,
-            {eppi_pkg_sup, start_link, []},
+        % start package sync server
+        {eppi_pkg_sync_sup,
+            {eppi_pkg_sync_sup, start_link, []},
              permanent, brutal_kill, supervisor, []
-        }%,
+        },
+
+        % start package stats server
+        {eppi_pkg_stat_sup,
+            {eppi_pkg_stat_sup, start_link, []},
+             permanent, brutal_kill, supervisor, []
+        }
 
         % start http api
         %{eppi_http_sup,
         %    {eppi_http_sup, start_link, []},
         %    permanent, brutal_kill, supervisor, []
         %},
-
     ],
 
     {ok, { {one_for_one, 0, 1}, Childrens} }.
