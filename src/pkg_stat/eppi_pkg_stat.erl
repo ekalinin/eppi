@@ -8,7 +8,8 @@
          get_packages/0,
          get_packages/1,
          get_versions/0,
-         get_versions/1
+         get_versions/1,
+         connect/1
         ]).
 
 %% gen_server callbacks
@@ -38,6 +39,19 @@ get_versions() ->
     get_versions(node()).
 get_versions(Node) ->
     gen_server:call({?SERVER, Node}, {get_versions}).
+
+connect(Node) ->
+    pong = net_adm:ping(Node),
+    lager:info(" + Broadcasting: new-node ..."),
+    lists:foreach(
+        fun(Node) ->
+            lager:info("   sending `new-node` to ~p ...", [Node]),
+            gen_server:cast({?SERVER, Node},
+                            {new_node, node()})
+        end,
+        nodes()),
+    ok.
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -80,9 +94,35 @@ handle_cast({start_server, PackagesDir}, State) ->
             {noreply, State#state{versions = []}}
     end;
 
+handle_cast({new_node, ReplyTo}, State) ->
+    lager:info(" - Got 'new_node' from ~p", [ReplyTo]),
+    lager:info("    -> Sending 'i-have' to the ~p", [ReplyTo]),
+    gen_server:cast({?SERVER, ReplyTo},
+                    {i_have, node(), State#state.versions}),
+    lager:info("    -> Sending 'what-is-yours' to the ~p", [ReplyTo]),
+    gen_server:cast({?SERVER, ReplyTo},
+                    {what_is_yours, node()}),
+    {noreply, State};
+
+handle_cast({i_have_new, ReplyTo, FileName}, State) ->
+    lager:info(" - Got 'i_have_new' [~p] from ~p", [FileName, ReplyTo]),
+    {noreply, State};
+
+handle_cast({i_have, ReplyTo, Files}, State) ->
+    lager:info(" - Got 'i_have' [~p] from ~p", [Files, ReplyTo]),
+    {noreply, State};
+
+handle_cast({what_is_yours, ReplyTo}, State) ->
+    lager:info(" - Got 'what_is_yours` from ~p", [ReplyTo]),
+    lager:info("    -> Sending 'i-have' [~p] to the ~p",
+                    [State#state.versions, ReplyTo]),
+    gen_server:cast({?SERVER, ReplyTo},
+                    {i_have, node(), State#state.versions}),
+    {noreply, State};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
+
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -124,11 +164,39 @@ get_local_versions(Dir, Package) ->
 %    ),
 %    lists:map(fun filename:basename/1, Packages).
 
+
+%%
+%% Notify utils
+%%
 notify_new(FileName) ->
+    lager:info(" + Broadcasting: i-have-new ..."),
+    lists:foreach(
+        fun(Node) ->
+            lager:info("   sending `i-have-new` to ~p ...", [Node]),
+            gen_server:cast({?SERVER, Node},
+                            {i_have_new, node(), FileName})
+        end,
+        nodes()),
     ok.
 
 notify_i_have(Files) ->
+    lager:info(" + Broadcasting: i-have ..."),
+    lists:foreach(
+        fun(Node) ->
+            lager:info("   sending `i-have` to ~p ...", [Node]),
+            gen_server:cast({?SERVER, Node},
+                            {i_have, node(), Files})
+        end,
+        nodes()),
     ok.
 
 notify_what_is_yours() ->
+    lager:info(" + Broadcasting: what-is-yours ..."),
+    lists:foreach(
+        fun(Node) ->
+            lager:info("   sending `what-is-yours` to ~p ...", [Node]),
+            gen_server:cast({?SERVER, Node},
+                            {what_is_yours, node()})
+        end,
+        nodes()),
     ok.
