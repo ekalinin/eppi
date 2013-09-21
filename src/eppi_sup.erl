@@ -37,4 +37,4 @@ init([]) ->
 
     ],
 
-    {ok, { {one_for_one, 1, 60}, Childrens} }.
+    {ok, { {one_for_one, 0, 1}, Childrens} }.
