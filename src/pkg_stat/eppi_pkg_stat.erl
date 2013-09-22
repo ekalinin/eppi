@@ -96,12 +96,8 @@ handle_cast({start_server, PackagesDir}, State) ->
 
 handle_cast({new_node, ReplyTo}, State) ->
     lager:info(" - Got 'new_node' from ~p", [ReplyTo]),
-    lager:info("    -> Sending 'i-have' to the ~p", [ReplyTo]),
-    gen_server:cast({?SERVER, ReplyTo},
-                    {i_have, node(), State#state.versions}),
-    lager:info("    -> Sending 'what-is-yours' to the ~p", [ReplyTo]),
-    gen_server:cast({?SERVER, ReplyTo},
-                    {what_is_yours, node()}),
+    notify_i_have(State#state.versions, ReplyTo),
+    notify_what_is_yours(ReplyTo),
     {noreply, State};
 
 handle_cast({i_have_new, ReplyTo, FileName}, State) ->
@@ -114,10 +110,7 @@ handle_cast({i_have, ReplyTo, Files}, State) ->
 
 handle_cast({what_is_yours, ReplyTo}, State) ->
     lager:info(" - Got 'what_is_yours` from ~p", [ReplyTo]),
-    lager:info("    -> Sending 'i-have' [~p] to the ~p",
-                    [State#state.versions, ReplyTo]),
-    gen_server:cast({?SERVER, ReplyTo},
-                    {i_have, node(), State#state.versions}),
+    notify_i_have(State#state.versions, ReplyTo),
     {noreply, State};
 
 handle_cast(_Msg, State) ->
@@ -168,35 +161,36 @@ get_local_versions(Dir, Package) ->
 %%
 %% Notify utils
 %%
+notify_new(FileName, Node) ->
+    lager:info("   sending `i-have-new` to ~p ...", [Node]),
+    gen_server:cast({?SERVER, Node}, {i_have_new, node(), FileName}).
+
 notify_new(FileName) ->
     lager:info(" + Broadcasting: i-have-new ..."),
     lists:foreach(
-        fun(Node) ->
-            lager:info("   sending `i-have-new` to ~p ...", [Node]),
-            gen_server:cast({?SERVER, Node},
-                            {i_have_new, node(), FileName})
-        end,
+        fun(Node) -> notify_new(FileName, Node) end,
         nodes()),
     ok.
+
+
+notify_i_have(Files, Node) ->
+    lager:info("   sending `i-have` to ~p ...", [Node]),
+    gen_server:cast({?SERVER, Node}, {i_have, node(), Files}).
 
 notify_i_have(Files) ->
     lager:info(" + Broadcasting: i-have ..."),
     lists:foreach(
-        fun(Node) ->
-            lager:info("   sending `i-have` to ~p ...", [Node]),
-            gen_server:cast({?SERVER, Node},
-                            {i_have, node(), Files})
-        end,
+        fun(Node) -> notify_i_have(Files, Node) end,
         nodes()),
     ok.
+
+notify_what_is_yours(Node) ->
+    lager:info("   sending `what-is-yours` to ~p ...", [Node]),
+    gen_server:cast({?SERVER, Node}, {what_is_yours, node()}).
 
 notify_what_is_yours() ->
     lager:info(" + Broadcasting: what-is-yours ..."),
     lists:foreach(
-        fun(Node) ->
-            lager:info("   sending `what-is-yours` to ~p ...", [Node]),
-            gen_server:cast({?SERVER, Node},
-                            {what_is_yours, node()})
-        end,
+        fun(Node) -> notify_what_is_yours(Node) end,
         nodes()),
     ok.
