@@ -35,6 +35,22 @@ run-node: compile
 		-setcookie eppi_cookie	\
 		-config ${config_file}
 
+run-test-cluster-node-1: compile
+	@erl -sname eppi1 			\
+		-pa ebin deps/*/ebin 	\
+		-s eppi 				\
+		-setcookie eppi_cookie	\
+		-config eppi
+
+run-test-cluster-node-2:
+	@rm -rf packages-2
+	@erl -sname eppi2 			\
+		-pa ebin deps/*/ebin 	\
+		-s eppi 				\
+		-setcookie eppi_cookie	\
+		-eval "eppi:connect('eppi1@kev-nb900')." \
+		-config tests/eppi
+
 doc:
 	$(REBAR) doc skip_deps=true
 
