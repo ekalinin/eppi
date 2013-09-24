@@ -3,7 +3,8 @@
 %% API
 -export([
     start/0,
-    stop/0
+    stop/0,
+    connect/1
 ]).
 
 -define(APPS, [lager, crypto, ranch, cowboy, eppi]).
@@ -19,3 +20,6 @@ start() ->
 stop() ->
     [application:stop(A) || A <- lists:reverse(?APPS)],
     ok.
+
+connect(Node) ->
+    eppi_pkg_stat:connect(Node).
