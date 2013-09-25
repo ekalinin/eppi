@@ -5,10 +5,6 @@
 %% API
 -export([
          start_link/0,
-         get_packages/0,
-         get_packages/1,
-         get_versions/0,
-         get_versions/1,
          connect/1
         ]).
 
@@ -19,8 +15,8 @@
 -define(SERVER, ?MODULE).
 
 -record(state, {
-        % Versions list
-        versions = []
+        % Files list
+        files = []
     }).
 
 %%%===================================================================
@@ -30,23 +26,13 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-get_packages() ->
-    get_packages(node()).
-get_packages(Node) ->
-    gen_server:call({?SERVER, Node}, {get_packages}).
-
-get_versions() ->
-    get_versions(node()).
-get_versions(Node) ->
-    gen_server:call({?SERVER, Node}, {get_versions}).
-
 connect(Node) ->
     pong = net_adm:ping(Node),
     lager:info(" + Broadcasting: new-node ..."),
     lists:foreach(
-        fun(Node) ->
-            lager:info("   sending `new-node` to ~p ...", [Node]),
-            gen_server:cast({?SERVER, Node},
+        fun(TargetNode) ->
+            lager:info("   sending `new-node` to ~p ...", [TargetNode]),
+            gen_server:cast({?SERVER, TargetNode},
                             {new_node, node()})
         end,
         nodes()),
@@ -64,12 +50,6 @@ init([]) ->
     % init state
     {ok, #state{}}.
 
-handle_call({get_packages}, _From, State) ->
-    {reply, [], State};
-
-handle_call({get_versions}, _From, State) ->
-    {reply, State#state.versions, State};
-
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -78,12 +58,12 @@ handle_cast({start_server, PackagesDir}, State) ->
     lager:info(" * Starting server from directory: ~s", [PackagesDir]),
     case filelib:is_dir(PackagesDir) of
         true ->
-            Versions = get_local_versions(PackagesDir),
-            lager:info(" * Found versions: ~p", [length(Versions)]),
-            ok = notify_i_have(Versions),
+            Files = get_local_files(PackagesDir),
+            lager:info(" * Found files: ~p", [length(Files)]),
+            ok = notify_i_have(Files),
             ok = notify_what_is_yours(),
             % return
-            {noreply, State#state{versions = Versions}};
+            {noreply, State#state{files = Files}};
         false ->
             lager:info(" * Directory doesn't exists."),
             ok = filelib:ensure_dir(PackagesDir),
@@ -91,12 +71,12 @@ handle_cast({start_server, PackagesDir}, State) ->
             lager:info(" * Directory created."),
             ok = notify_what_is_yours(),
             % return
-            {noreply, State#state{versions = []}}
+            {noreply, State#state{files = []}}
     end;
 
 handle_cast({new_node, ReplyTo}, State) ->
     lager:info(" - Got 'new_node' from ~p", [ReplyTo]),
-    notify_i_have(State#state.versions, ReplyTo),
+    notify_i_have(State#state.files, ReplyTo),
     notify_what_is_yours(ReplyTo),
     {noreply, State};
 
@@ -106,11 +86,13 @@ handle_cast({i_have_new, ReplyTo, FileName}, State) ->
 
 handle_cast({i_have, ReplyTo, Files}, State) ->
     lager:info(" - Got 'i_have' [~p] from ~p", [Files, ReplyTo]),
+    % TODO: merge income Files and local Versions
+    %       http://www.erlang.org/doc/man/lists.html
     {noreply, State};
 
 handle_cast({what_is_yours, ReplyTo}, State) ->
     lager:info(" - Got 'what_is_yours` from ~p", [ReplyTo]),
-    notify_i_have(State#state.versions, ReplyTo),
+    notify_i_have(State#state.files, ReplyTo),
     {noreply, State};
 
 handle_cast(_Msg, State) ->
@@ -138,13 +120,13 @@ code_change(_OldVsn, State, _Extra) ->
 find_files_int(F, Acc) -> [F | Acc].
 
 %% @doc Returns all files in sub-directories
-get_local_versions(Dir) ->
+get_local_files(Dir) ->
     Versions = filelib:fold_files(Dir, ".*", true,
         fun find_files_int/2, []),
     lists:map(fun filename:basename/1, Versions).
 
 %% @doc Returnds all files in the package's directory
-get_local_versions(Dir, Package) ->
+get_local_files(Dir, Package) ->
     Versions = filelib:fold_files(filename:join(Dir, Package),
         ".*", true, fun find_files_int/2, []),
     lists:map(fun filename:basename/1, Versions).
