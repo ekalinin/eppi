@@ -5,6 +5,7 @@
 %% API
 -export([
          start_link/0,
+         refresh_files/0,
          connect/1
         ]).
 
@@ -38,15 +39,16 @@ connect(Node) ->
         nodes()),
     ok.
 
+refresh_files() ->
+    gen_server:cast(?SERVER, {refresh_files}).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
 init([]) ->
-    {ok, PackagesDir} = application:get_env(eppi, packages_dir),
     % init server
-    ok = gen_server:cast(?SERVER, {start_server, PackagesDir}),
+    ok = gen_server:cast(?SERVER, {start_server}),
     % init state
     {ok, #state{}}.
 
@@ -54,7 +56,15 @@ handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-handle_cast({start_server, PackagesDir}, State) ->
+handle_cast({refresh_files}, State) ->
+    lager:info(" [in] Got 'refresh_files' ..."),
+    {ok, PackagesDir} = application:get_env(eppi, packages_dir),
+    Files = get_local_files(PackagesDir),
+    lager:info(" [in] Found files: ~p", [length(Files)]),
+    {noreply, State#state{files = Files}};
+
+handle_cast({start_server}, State) ->
+    {ok, PackagesDir} = application:get_env(eppi, packages_dir),
     lager:info(" * Starting server from directory: ~s", [PackagesDir]),
     case filelib:is_dir(PackagesDir) of
         true ->
@@ -84,10 +94,16 @@ handle_cast({i_have_new, ReplyTo, FileName}, State) ->
     lager:info(" - Got 'i_have_new' [~p] from ~p", [FileName, ReplyTo]),
     {noreply, State};
 
-handle_cast({i_have, ReplyTo, Files}, State) ->
-    lager:info(" - Got 'i_have' [~p] from ~p", [Files, ReplyTo]),
-    % TODO: merge income Files and local Versions
-    %       http://www.erlang.org/doc/man/lists.html
+handle_cast({i_have, OwnerNode, Files}, State) ->
+    lager:info(" - Got 'i_have' [~p] from ~p", [Files, OwnerNode]),
+    lists:map(
+        fun (File) ->
+            case lists:member(File, State#state.files) of
+                false -> eppi_pkg_sync:sync_from_node(File, OwnerNode);
+                true ->  ok
+            end
+        end,
+        Files),
     {noreply, State};
 
 handle_cast({what_is_yours, ReplyTo}, State) ->
@@ -130,14 +146,6 @@ get_local_files(Dir, Package) ->
     Versions = filelib:fold_files(filename:join(Dir, Package),
         ".*", true, fun find_files_int/2, []),
     lists:map(fun filename:basename/1, Versions).
-
-%% @doc Returns all sub-directories
-%get_local_packages(Path) ->
-%    Packages = lists:filter(
-%        fun(X) -> filelib:is_dir(X) end,
-%        filelib:wildcard(Path ++ "/*")
-%    ),
-%    lists:map(fun filename:basename/1, Packages).
 
 
 %%
