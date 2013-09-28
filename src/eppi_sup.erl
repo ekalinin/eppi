@@ -20,10 +20,16 @@ start_link() ->
 %% ===================================================================
 init([]) ->
     Childrens = [
-        % start package sync server
+        % start sync handlers supervisor
         {eppi_pkg_sync_sup,
             {eppi_pkg_sync_sup, start_link, []},
              permanent, brutal_kill, supervisor, []
+        },
+
+        % start sync manager
+        {eppi_pkg_sync,
+            {eppi_pkg_sync, start_link, []},
+             permanent, brutal_kill, worker, []
         },
 
         % start package stats server
