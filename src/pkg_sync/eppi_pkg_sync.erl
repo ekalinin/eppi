@@ -25,10 +25,10 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 sync_from_pypi(FileName) ->
-    ok.
+    eppi_pkg_sync_sup:sync({from_pypi, FileName}).
 
 sync_from_node(FileName, Node) ->
-    ok.
+    eppi_pkg_sync_sup:sync({from_node, FileName, Node}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -52,7 +52,3 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
-%%%===================================================================
-%%% Internal functions
-%%%===================================================================
