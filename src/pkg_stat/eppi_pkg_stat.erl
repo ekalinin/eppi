@@ -29,10 +29,10 @@ start_link() ->
 
 connect(Node) ->
     pong = net_adm:ping(Node),
-    lager:info(" + Broadcasting: new-node ..."),
+    lager:info("* Broadcasting: new-node ..."),
     lists:foreach(
         fun(TargetNode) ->
-            lager:info("   sending `new-node` to ~p ...", [TargetNode]),
+            lager:info("<-- sending `new-node` to ~p ...", [TargetNode]),
             gen_server:cast({?SERVER, TargetNode},
                             {new_node, node()})
         end,
@@ -57,49 +57,49 @@ handle_call(_Request, _From, State) ->
     {reply, Reply, State}.
 
 handle_cast({refresh_files}, State) ->
-    lager:info(" [in] Got 'refresh_files' ..."),
+    lager:info("-> Got 'refresh_files' ..."),
     {ok, PackagesDir} = application:get_env(eppi, packages_dir),
     Files = get_local_files(PackagesDir),
-    lager:info(" [in] Found files: ~p", [length(Files)]),
+    lager:info("--> Found files: ~p", [length(Files)]),
     {noreply, State#state{files = Files}};
 
 handle_cast({start_server}, State) ->
     {ok, PackagesDir} = application:get_env(eppi, packages_dir),
-    lager:info(" * Starting server from directory: ~s", [PackagesDir]),
+    lager:info("-> Got 'start_server', for directory: ~s", [PackagesDir]),
     case filelib:is_dir(PackagesDir) of
         true ->
             Files = get_local_files(PackagesDir),
-            lager:info(" * Found files: ~p", [length(Files)]),
+            lager:info("--> Found files: ~p", [length(Files)]),
             ok = notify_i_have(Files),
             ok = notify_what_is_yours(),
             % return
             {noreply, State#state{files = Files}};
         false ->
-            lager:info(" * Directory doesn't exists."),
+            lager:info("--> Directory doesn't exists."),
             ok = filelib:ensure_dir(PackagesDir),
             ok = file:make_dir(PackagesDir),
-            lager:info(" * Directory created."),
+            lager:info("--> Directory created."),
             ok = notify_what_is_yours(),
             % return
             {noreply, State#state{files = []}}
     end;
 
 handle_cast({new_node, ReplyTo}, State) ->
-    lager:info(" - Got 'new_node' from ~p", [ReplyTo]),
+    lager:info("-> Got 'new_node' from ~p", [ReplyTo]),
     notify_i_have(State#state.files, ReplyTo),
     notify_what_is_yours(ReplyTo),
     {noreply, State};
 
 handle_cast({i_have_new, ReplyTo, FileName}, State) ->
-    lager:info(" - Got 'i_have_new' [~p] from ~p", [FileName, ReplyTo]),
+    lager:info("-> Got 'i_have_new' [~p] from ~p", [FileName, ReplyTo]),
     {noreply, State};
 
 handle_cast({i_have, OwnerNode, Files}, State) ->
-    lager:info(" - Got 'i_have' [~p] from ~p", [Files, OwnerNode]),
+    lager:info("-> Got 'i_have' [~p] from ~p", [Files, OwnerNode]),
     lists:map(
         fun (File) ->
             case lists:member(File, State#state.files) of
-                false -> eppi_pkg_sync:sync_from_node(File, OwnerNode);
+                false -> eppi_pkg_sync:get_from_node(File, OwnerNode);
                 true ->  ok
             end
         end,
@@ -107,7 +107,7 @@ handle_cast({i_have, OwnerNode, Files}, State) ->
     {noreply, State};
 
 handle_cast({what_is_yours, ReplyTo}, State) ->
-    lager:info(" - Got 'what_is_yours` from ~p", [ReplyTo]),
+    lager:info("-> Got 'what_is_yours` from ~p", [ReplyTo]),
     notify_i_have(State#state.files, ReplyTo),
     {noreply, State};
 
@@ -152,11 +152,11 @@ get_local_files(Dir, Package) ->
 %% Notify utils
 %%
 notify_new(FileName, Node) ->
-    lager:info("   sending `i-have-new` to ~p ...", [Node]),
+    lager:info("<-- Sending `i-have-new` to ~p ...", [Node]),
     gen_server:cast({?SERVER, Node}, {i_have_new, node(), FileName}).
 
 notify_new(FileName) ->
-    lager:info(" + Broadcasting: i-have-new ..."),
+    lager:info("<- Broadcasting: i-have-new ..."),
     lists:foreach(
         fun(Node) -> notify_new(FileName, Node) end,
         nodes()),
@@ -164,22 +164,22 @@ notify_new(FileName) ->
 
 
 notify_i_have(Files, Node) ->
-    lager:info("   sending `i-have` to ~p ...", [Node]),
+    lager:info("<-- Sending `i-have` to ~p ...", [Node]),
     gen_server:cast({?SERVER, Node}, {i_have, node(), Files}).
 
 notify_i_have(Files) ->
-    lager:info(" + Broadcasting: i-have ..."),
+    lager:info("<- Broadcasting: i-have ..."),
     lists:foreach(
         fun(Node) -> notify_i_have(Files, Node) end,
         nodes()),
     ok.
 
 notify_what_is_yours(Node) ->
-    lager:info("   sending `what-is-yours` to ~p ...", [Node]),
+    lager:info("<-- Sending `what-is-yours` to ~p ...", [Node]),
     gen_server:cast({?SERVER, Node}, {what_is_yours, node()}).
 
 notify_what_is_yours() ->
-    lager:info(" + Broadcasting: what-is-yours ..."),
+    lager:info("<- Broadcasting: what-is-yours ..."),
     lists:foreach(
         fun(Node) -> notify_what_is_yours(Node) end,
         nodes()),

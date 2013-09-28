@@ -5,8 +5,8 @@
 %% API
 -export([
          start_link/0,
-         sync_from_pypi/1,
-         sync_from_node/2
+         get_from_pypi/1,
+         get_from_node/2
         ]).
 
 %% gen_server callbacks
@@ -24,11 +24,13 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
-sync_from_pypi(FileName) ->
-    eppi_pkg_sync_sup:sync({from_pypi, FileName}).
+get_from_pypi(FileName) ->
+    lager:info("* Get from pypi: ~p", [FileName]),
+    eppi_pkg_sync_sup:worker({get_from_pypi, FileName}).
 
-sync_from_node(FileName, Node) ->
-    eppi_pkg_sync_sup:sync({from_node, FileName, Node}).
+get_from_node(FileName, Node) ->
+    lager:info("* Get from node: ~p@~p", [FileName, Node]),
+    gen_server:cast({?SERVER, Node}, {send_me_file, FileName, node()}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -40,6 +42,16 @@ init([]) ->
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
+
+handle_cast({send_me_file, FileName, Node}, State) ->
+    lager:info("-> Got `send_me_file` for: ~p from: ~p",[FileName, Node]),
+    eppi_pkg_sync_sup:worker({send_to_node, FileName, {?SERVER, Node}}),
+    {noreply, State};
+
+handle_cast({save_file, FileName, Content}, State) ->
+    lager:info("-> Got `save_file` for: ~p",[FileName]),
+    eppi_pkg_sync_sup:worker({save_file, FileName, Content}),
+    {noreply, State};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.

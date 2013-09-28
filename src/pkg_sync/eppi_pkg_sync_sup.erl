@@ -5,7 +5,7 @@
 %% API
 -export([
          start_link/0,
-         sync/1
+         worker/1
         ]).
 
 %% Supervisor callbacks
@@ -20,7 +20,7 @@
 start_link() ->
     supervisor:start_link({local, ?SERVER}, ?MODULE, []).
 
-sync(Args) ->
+worker(Args) ->
     supervisor:start_child(?SERVER, [Args]).
 
 %%%===================================================================
