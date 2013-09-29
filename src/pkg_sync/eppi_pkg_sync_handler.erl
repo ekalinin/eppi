@@ -70,7 +70,7 @@ handle_cast({get_from_node, FileName, Server, Node}, State) ->
 handle_cast({send_to_node, FileName, Server, Node}, State) ->
     lager:info("-> Got 'send_to_node' for: ~p @ ~p",[FileName, Node]),
     % find full file path
-    {ok, PackagesDir} = application:get_env(eppi, packages_dir),
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
     FullFileName = filename:absname(filename:join(PackagesDir, FileName)),
     lager:info("-  reading file: ~p",[FullFileName]),
     % read file & send it
@@ -82,7 +82,7 @@ handle_cast({send_to_node, FileName, Server, Node}, State) ->
 handle_cast({save_file, FileName, Content}, State) ->
     lager:info("-> Got 'save_file' for: ~p", [FileName]),
     % find full file path
-    {ok, PackagesDir} = application:get_env(eppi, packages_dir),
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
     FullFileName = filename:absname(filename:join(PackagesDir, FileName)),
     lager:info("-  writing file: ~p",[FullFileName]),
     % write file

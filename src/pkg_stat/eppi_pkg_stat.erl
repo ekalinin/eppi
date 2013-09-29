@@ -66,13 +66,13 @@ handle_call(_Request, _From, State) ->
 
 handle_cast({refresh_files}, State) ->
     lager:info("-> Got 'refresh_files' ..."),
-    {ok, PackagesDir} = application:get_env(eppi, packages_dir),
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
     Files = get_local_files(PackagesDir),
     lager:info("--> Found files: ~p", [length(Files)]),
     {noreply, State#state{files = Files}};
 
 handle_cast({start_server}, State) ->
-    {ok, PackagesDir} = application:get_env(eppi, packages_dir),
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
     lager:info("-> Got 'start_server', for directory: ~s", [PackagesDir]),
     case filelib:is_dir(PackagesDir) of
         true ->

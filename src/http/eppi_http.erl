@@ -45,7 +45,7 @@ handle_call(_Request, _From, State) ->
 %%
 handle_cast(start_serve, State) ->
     % Get http port
-    {ok, HttpPort} = application:get_env(eppi, http_port),
+    {ok, HttpPort} = eppi_utl:get_env(http_port),
     % Cowboy dispatch
     Dispatch = dispatch_rules(),
     % start serving
