@@ -29,13 +29,13 @@ init([]) ->
         % start sync manager
         {eppi_pkg_sync,
             {eppi_pkg_sync, start_link, []},
-             permanent, brutal_kill, worker, []
+             permanent, 2000, worker, []
         },
 
         % start package stats server
-        {eppi_pkg_stat_sup,
-            {eppi_pkg_stat_sup, start_link, []},
-             permanent, brutal_kill, supervisor, []
+        {eppi_pkg_stat,
+            {eppi_pkg_stat, start_link, []},
+            permanent, 2000, worker, []
         }
 
         % start http api
