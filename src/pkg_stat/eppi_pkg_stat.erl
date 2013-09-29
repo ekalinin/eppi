@@ -5,6 +5,7 @@
 %% API
 -export([
          start_link/0,
+         get_files/0,
          refresh_files/0,
          connect/1
         ]).
@@ -26,6 +27,9 @@
 
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+get_files() ->
+    gen_server:call(?SERVER, {get_files}).
 
 connect(Node) ->
     pong = net_adm:ping(Node),
@@ -51,6 +55,10 @@ init([]) ->
     ok = gen_server:cast(?SERVER, {start_server}),
     % init state
     {ok, #state{}}.
+
+handle_call(_Request, _From, State) ->
+    Reply = State#state.files,
+    {reply, Reply, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
