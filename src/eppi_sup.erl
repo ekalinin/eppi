@@ -36,6 +36,12 @@ init([]) ->
         {eppi_pkg_stat,
             {eppi_pkg_stat, start_link, []},
             permanent, 2000, worker, []
+        },
+
+        % start package monitoring server
+        {eppi_pkg_mon,
+            {eppi_pkg_mon, start_link, []},
+            permanent, 2000, worker, []
         }
 
         % start http api

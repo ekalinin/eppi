@@ -25,11 +25,9 @@ start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 get_from_pypi(FileName) ->
-    lager:info("* Get from pypi: ~p", [FileName]),
     eppi_pkg_sync_sup:worker({get_from_pypi, FileName}).
 
 get_from_node(FileName, Node) ->
-    lager:info("* Get from node: ~p@~p", [FileName, Node]),
     gen_server:cast({?SERVER, Node}, {send_me_file, FileName, node()}).
 
 %%%===================================================================
