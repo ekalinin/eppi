@@ -17,57 +17,27 @@
 %%% API
 %%%===================================================================
 
-start_link({save_file, FileName, Content}) ->
-    %lager:info("* Link worker, 'save_file': ~p", [FileName]),
-    gen_server:start_link(?SERVER, [save_file, FileName, Content], []);
-
-start_link({send_to_node, FileName, {Server, Node}}) ->
-    %lager:info("* Link worker, 'send_to_node': ~p@~p/~p",
-    %    [FileName, Node, Server]),
-    gen_server:start_link(?SERVER, [send_to_node, FileName, Server, Node], []);
-
-start_link({get_from_pypi, FileName}) ->
-    %lager:info("* Link worker, 'get_from_pypi': ~p", [FileName]),
-    gen_server:start_link(?SERVER, [get_from_pypi, FileName], []);
-
-start_link({get_from_node, FileName, {Server, Node}}) ->
-    %lager:info("* Link worker, 'get_from_node': ~p@~p/~p", [FileName, Node, Server]),
-    gen_server:start_link(?SERVER, [get_from_node, FileName, Server, Node], []).
+start_link(Args) ->
+    gen_server:start_link(?SERVER, Args, []).
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
-init([get_from_pypi, FileName, Parent]) ->
-    {ok, #state{}};
-
-init([save_file, FileName, Content]) ->
-    %lager:info("-> Init 'save_file' worker for: ~p", [FileName]),
-    gen_server:cast(self(), {save_file, FileName, Content}),
-    {ok, #state{}};
-
-init([send_to_node, FileName, Server, Node]) ->
-    %lager:info("-> Init 'send_to_node' worker for: ~p@~p/~p",
-    %    [FileName, Node, Server]),
-    gen_server:cast(self(), {send_to_node, FileName, Server, Node}),
-    {ok, #state{}};
-
-init([get_from_node, FileName, Server, Node]) ->
-    %lager:info("-> Init 'get_from_node' worker for: ~p@~p/~p",
-    %    [FileName, Node, Server]),
-    gen_server:cast(self(), {get_from_node, FileName, Server, Node}),
+init(Args) ->
+    gen_server:cast(self(), Args),
     {ok, #state{}}.
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-handle_cast({get_from_node, FileName, Server, Node}, State) ->
+handle_cast({get_from_node, FileName, {Server, Node}}, State) ->
     lager:info("-> Got 'get_from_node' for: ~p @ ~p",[FileName, Node]),
     gen_server:cast({Server, Node}, {give_me_file, FileName, node()}),
     {noreply, State};
 
-handle_cast({send_to_node, FileName, Server, Node}, State) ->
+handle_cast({send_to_node, FileName, {Server, Node}}, State) ->
     lager:info("* Sending ~p to ~p ...",[FileName, Node]),
     % find full file path
     {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
