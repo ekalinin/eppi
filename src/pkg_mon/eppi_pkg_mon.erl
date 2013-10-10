@@ -4,6 +4,9 @@
 
 %% API
 -export([
+         get_files/1,
+         get_files/0,
+         refresh_files/0,
          start_link/0
         ]).
 
@@ -27,24 +30,64 @@
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+get_files(true) ->
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
+    Files = get_local_files(PackagesDir),
+    gen_server:cast(?SERVER, {refresh_files, Files}),
+    Files;
+get_files(_) ->
+    get_files().
+get_files() ->
+    gen_server:call(?SERVER, {get_files}).
+
+refresh_files() ->
+    gen_server:cast(?SERVER, {refresh_files}).
+
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 
 init([]) ->
-    gen_server:cast(?SERVER, {check_init}),
+    gen_server:cast(?SERVER, {start_server}),
     {ok, #state{}}.
+
+handle_call({get_files}, _From, State) ->
+    Reply = State#state.files,
+    {reply, Reply, State};
 
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
 
-%% @doc Init file checking
-handle_cast({check_init}, State) ->
+handle_cast({refresh_files, Files}, State) ->
+    lager:info("+ Refresh filelist cache, new list: ~p", [Files]),
+    {noreply, State#state{files = Files}};
+
+handle_cast({refresh_files}, State) ->
+    lager:info("+ Refreshing filelist cache ..."),
+    Files = get_files(true),
+    lager:info("+ Found files: ~p", [length(Files)]),
+    {noreply, State#state{files = Files}};
+
+handle_cast({start_server}, State) ->
     {ok, CheckPeriod} = eppi_utl:get_env(new_packages_check_period),
-    Files = eppi_pkg_stat:get_files(true),
-    lager:info("+ Starting eppi:mon server, files: ~p, period: ~p [secs]",
-                                            [Files, CheckPeriod/1000]),
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
+    lager:info("+ Starting eppi:mon server, directory: ~p, period: ~p [secs]",
+                                        [PackagesDir, CheckPeriod/1000]),
+    case filelib:is_dir(PackagesDir) of
+        true ->
+            Files = get_files(true),
+            ok = eppi_pkg_stat:notify_i_have(Files),
+            ok = eppi_pkg_stat:notify_what_is_yours();
+        false ->
+            Files = [],
+            lager:debug("+ Directory doesn't exists ..."),
+            ok = filelib:ensure_dir(PackagesDir),
+            ok = file:make_dir(PackagesDir),
+            lager:info("+ Directory created."),
+            ok = eppi_pkg_stat:notify_what_is_yours()
+    end,
     erlang:send_after(CheckPeriod, self(), {check_new_packages}),
     {noreply, State#state{files = Files, check_period = CheckPeriod}};
 
@@ -54,7 +97,7 @@ handle_cast(_Msg, State) ->
 %% @doc Check new files (periodic task)
 handle_info({check_new_packages}, State) ->
     lager:debug("+ Checking new files ..."),
-    CurrFiles = eppi_pkg_stat:get_files(true),
+    CurrFiles = get_files(true),
     PrevFiles = State#state.files,
     % Try to get difference between files
     case CurrFiles -- PrevFiles of
@@ -82,3 +125,22 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+%%%
+%%% Package — sub-directory
+%%% Version — file in sub-directory
+%%%
+
+%% @doc Internal. For Accumulation files.
+find_files_int(F, Acc) -> [F | Acc].
+
+%% @doc Returns all files in sub-directories
+get_local_files(Dir) ->
+    Versions = filelib:fold_files(Dir, ".*", true,
+        fun find_files_int/2, []),
+    lists:map(fun filename:basename/1, Versions).
+
+%% @doc Returnds all files in the package's directory
+get_local_files(Dir, Package) ->
+    Versions = filelib:fold_files(filename:join(Dir, Package),
+        ".*", true, fun find_files_int/2, []),
+    lists:map(fun filename:basename/1, Versions).

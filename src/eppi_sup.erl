@@ -20,6 +20,12 @@ start_link() ->
 %% ===================================================================
 init([]) ->
     Childrens = [
+        % start files/packages monitoring server
+        {eppi_pkg_mon,
+            {eppi_pkg_mon, start_link, []},
+            permanent, 2000, worker, []
+        },
+
         % start sync handlers supervisor
         {eppi_pkg_sync_sup,
             {eppi_pkg_sync_sup, start_link, []},
@@ -36,13 +42,8 @@ init([]) ->
         {eppi_pkg_stat,
             {eppi_pkg_stat, start_link, []},
             permanent, 2000, worker, []
-        },
-
-        % start package monitoring server
-        {eppi_pkg_mon,
-            {eppi_pkg_mon, start_link, []},
-            permanent, 2000, worker, []
         }
+
 
         % start http api
         %{eppi_http_sup,
