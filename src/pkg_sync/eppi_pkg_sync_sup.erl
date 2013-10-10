@@ -33,5 +33,5 @@ init([]) ->
             {eppi_pkg_sync_handler, start_link, []},
             temporary, brutal_kill, worker, []}
     ],
-    RestartStrategy = {simple_one_for_one, 0, 1},
+    RestartStrategy = {simple_one_for_one, 10, 60},
     {ok, {RestartStrategy, Children}}.

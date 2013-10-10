@@ -45,13 +45,13 @@ handle_call(_Request, _From, State) ->
 
 %% @doc Some Node asks current Node to send it a file
 handle_cast({send_me_file, FileName, Node}, State) ->
-    lager:info("-> Got `send_me_file` for: ~p from: ~p",[FileName, Node]),
+    lager:debug("- Got `send_me_file` for: ~p from: ~p",[FileName, Node]),
     eppi_pkg_sync_sup:worker({send_to_node, FileName, {?SERVER, Node}}),
     {noreply, State};
 
 %% @doc Some Node send a file to a current node
 handle_cast({save_file, FileName, Content}, State) ->
-    lager:info("-> Got `save_file` for: ~p",[FileName]),
+    lager:debug("- Got `save_file` for: ~p",[FileName]),
     eppi_pkg_sync_sup:worker({save_file, FileName, Content}),
     {noreply, State};
 

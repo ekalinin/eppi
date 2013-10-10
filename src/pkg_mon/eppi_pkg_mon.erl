@@ -43,7 +43,7 @@ handle_call(_Request, _From, State) ->
 handle_cast({check_init}, State) ->
     {ok, CheckPeriod} = eppi_utl:get_env(new_packages_check_period),
     Files = eppi_pkg_stat:get_files(true),
-    lager:info("* Monitoring: init with files: ~p, period: ~p secs",
+    lager:info("+ Starting eppi:mon server, files: ~p, period: ~p [secs]",
                                             [Files, CheckPeriod/1000]),
     erlang:send_after(CheckPeriod, self(), {check_new_packages}),
     {noreply, State#state{files = Files, check_period = CheckPeriod}};
@@ -53,18 +53,18 @@ handle_cast(_Msg, State) ->
 
 %% @doc Check new files (periodic task)
 handle_info({check_new_packages}, State) ->
-    lager:info("* Monitoring: checking new files ..."),
+    lager:debug("+ Checking new files ..."),
     CurrFiles = eppi_pkg_stat:get_files(true),
     PrevFiles = State#state.files,
     % Try to get difference between files
     case CurrFiles -- PrevFiles of
         % No new files
         [] ->
-            lager:info("* Monitoring: nothing new this time"),
+            lager:debug("+ nothing new."),
             ok;
         % Got new files
         NewFiles ->
-            lager:info("* Monitoring: found files: ~p", [NewFiles]),
+            lager:info("+ found files: ~p", [NewFiles]),
             eppi_pkg_stat:notify_i_have(NewFiles)
     end,
     erlang:send_after(State#state.check_period, self(), {check_new_packages}),
