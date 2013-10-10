@@ -1,4 +1,4 @@
--module(eppi_pkg_stat).
+-module(eppi_cluster).
 
 -behaviour(gen_server).
 

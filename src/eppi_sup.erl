@@ -38,9 +38,9 @@ init([]) ->
              permanent, 2000, worker, []
         },
 
-        % start package stats server
-        {eppi_pkg_stat,
-            {eppi_pkg_stat, start_link, []},
+        % start cluster server
+        {eppi_cluster,
+            {eppi_cluster, start_link, []},
             permanent, 2000, worker, []
         }
 

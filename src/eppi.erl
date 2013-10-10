@@ -22,4 +22,4 @@ stop() ->
     ok.
 
 connect(Node) ->
-    eppi_pkg_stat:connect(Node).
+    eppi_cluster:connect(Node).

@@ -78,15 +78,15 @@ handle_cast({start_server}, State) ->
     case filelib:is_dir(PackagesDir) of
         true ->
             Files = get_files(true),
-            ok = eppi_pkg_stat:notify_i_have(Files),
-            ok = eppi_pkg_stat:notify_what_is_yours();
+            ok = eppi_cluster:notify_i_have(Files),
+            ok = eppi_cluster:notify_what_is_yours();
         false ->
             Files = [],
             lager:debug("+ Directory doesn't exists ..."),
             ok = filelib:ensure_dir(PackagesDir),
             ok = file:make_dir(PackagesDir),
             lager:info("+ Directory created."),
-            ok = eppi_pkg_stat:notify_what_is_yours()
+            ok = eppi_cluster:notify_what_is_yours()
     end,
     erlang:send_after(CheckPeriod, self(), {check_new_packages}),
     {noreply, State#state{files = Files, check_period = CheckPeriod}};
@@ -108,7 +108,7 @@ handle_info({check_new_packages}, State) ->
         % Got new files
         NewFiles ->
             lager:info("+ found files: ~p", [NewFiles]),
-            eppi_pkg_stat:notify_i_have(NewFiles)
+            eppi_cluster:notify_i_have(NewFiles)
     end,
     erlang:send_after(State#state.check_period, self(), {check_new_packages}),
     {noreply, State#state{files = CurrFiles}};
