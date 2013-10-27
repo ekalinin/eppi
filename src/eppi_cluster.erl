@@ -44,7 +44,7 @@ notify_i_have(Files, Node) ->
     gen_server:cast({?SERVER, Node}, {i_have, node(), Files}).
 
 notify_i_have(Files) ->
-    lager:debug("* Broadcasting: `i-have` files: ~p to the cluster ...", [Files]),
+    lager:debug("* Broadcasting: `i-have` ~p to the cluster ...", [Files]),
     lists:foreach(
         fun(Node) -> notify_i_have(Files, Node) end,
         nodes()),
