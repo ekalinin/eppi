@@ -42,14 +42,13 @@ init([]) ->
         {eppi_cluster,
             {eppi_cluster, start_link, []},
             permanent, 2000, worker, []
-        }
-
+        },
 
         % start http api
-        %{eppi_http_sup,
-        %    {eppi_http_sup, start_link, []},
-        %    permanent, brutal_kill, supervisor, []
-        %},
+        {eppi_http_sup,
+            {eppi_http_sup, start_link, []},
+            permanent, brutal_kill, supervisor, []
+        }
     ],
 
     {ok, { {one_for_one, 0, 1}, Childrens} }.

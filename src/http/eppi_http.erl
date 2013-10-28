@@ -31,7 +31,7 @@ start_link() ->
 
 init([]) ->
     % start server
-    ok = gen_server:cast(self(), start_serve),
+    ok = gen_server:cast(self(), start_server),
     % init internal state
     {ok, #state{}}.
 
@@ -43,15 +43,16 @@ handle_call(_Request, _From, State) ->
 %%
 %% @doc Starts cowboy & set up routes for it
 %%
-handle_cast(start_serve, State) ->
+handle_cast(start_server, State) ->
     % Get http port
     {ok, HttpPort} = eppi_utl:get_env(http_port),
+    lager:info("= Starting eppi:http server, port: ~p ...", [HttpPort]),
     % Cowboy dispatch
     Dispatch = dispatch_rules(),
     % start serving
-    {ok, _} = cowboy:start_http(http_listener, ?EPPI_ACCEPTORS,
-        [{port, HttpPort}],
-        [{env, [{dispatch, Dispatch}]}]
+    {ok, _} = cowboy:start_http(http, ?EPPI_ACCEPTORS,
+                                [{port, HttpPort}],
+                                [{env, [{dispatch, Dispatch}]}]
     ),
     % return
     {noreply, State};
@@ -87,12 +88,12 @@ dispatch_rules() ->
             static("js"),
             static("fonts"),
             static("img"),
-            %{"/", index_handler, []},
+            {"/api/v1/", eppi_http_api, []},
             {"/", cowboy_static, [
                 {directory, {priv_dir, eppi, [?EPPI_STATIC]}},
                 {file, <<"index.html">>},
                 {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
             ]},
-            {'_', notfound_handler, []}
+            {'_', eppi_http_notfound, []}
         ]}
     ]).

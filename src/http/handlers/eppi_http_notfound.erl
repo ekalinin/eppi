@@ -1,4 +1,4 @@
--module(notfound_handler).
+-module(eppi_http_notfound).
 
 -behaviour(cowboy_http_handler).
 

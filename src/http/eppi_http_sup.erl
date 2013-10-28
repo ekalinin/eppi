@@ -40,9 +40,9 @@ init([]) ->
     ChildSpec = [
         {eppi_http,
             {eppi_http, start_link, []},
-             temporary, 2000, worker, []
+             permanent, 2000, worker, []
         }
     ],
 
     % init
-    {ok,{{simple_one_for_one, 10, 60}, ChildSpec}}.
+    {ok,{{one_for_one, 10, 60}, ChildSpec}}.
