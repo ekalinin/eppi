@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if package_name %} Links for {{ package_name }}
+    {% else %} Simple Index {% endif %}
+{% endblock %}
+
+{% block body %}
+{% if package_name %}
+
+    <h1>Links for {{ package_name }}</h1>
+
+    {% for file in files %}
+        <a href="/simple/{{ package_name }}/{{ file }}">{{ file }}</a><br/>
+    {% endfor %}
+
+{% else %}
+
+    {% for package in packages %}
+        <a href="/simple/{{ package }}">{{ package }}</a><br/>
+    {% endfor %}
+
+{% endif %}
+{% endblock %}
+
