@@ -82,13 +82,16 @@ static(Filetype) ->
     ]}.
 
 dispatch_rules() ->
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
     cowboy_router:compile([
         {'_', [
             static("css"),
             static("js"),
             static("fonts"),
             static("img"),
-            {"/simple/[:package/[:file]]", eppi_http_simple, []},
+            {"/simple/[:package]", eppi_http_simple, []},
+            {"/simple/:_/[...]", cowboy_static,
+                [{directory, PackagesDir}]},
             {"/", cowboy_static, [
                 {directory, {priv_dir, eppi, [?EPPI_STATIC]}},
                 {file, <<"index.html">>},
