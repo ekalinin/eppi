@@ -5,6 +5,7 @@
 %% API
 -export([
          get_files/0,
+         get_files/1,
          get_packages/0,
          check_new/0,
          start_link/0
@@ -35,6 +36,10 @@ start_link() ->
 %% @doc Returns list of files
 get_files() ->
     gen_server:call(?SERVER, {get_files}).
+
+%% @doc Returns list of packages for certain package
+get_files(Package) ->
+    lists:sort([F || F <- get_files(), get_package_for_file(F) == Package]).
 
 %% @doc Returns list of packages
 get_packages() ->
@@ -137,15 +142,18 @@ get_local_files(Dir) ->
         fun find_files_int/2, []),
     lists:map(fun filename:basename/1, Versions).
 
+get_package_for_file(File) ->
+    lists:nth(1, re:split(File, "-\\d+", [{return, list}])).
+
 %% @doc Converts list of files to a list of packages.
-convert_files_to_packages(Files) ->
+get_packages_for_files(Files) ->
     % remove version from each file
-    Packages = [lists:nth(1, re:split(F, "-\\d+", [{return, list}])) || F <- Files],
+    Packages = [get_package_for_file(F) || F <- Files],
     % remove dublicates & sort list
     lists:sort(sets:to_list(sets:from_list(Packages))).
 
 %% @doc Returns turple {ok, Files, Packages}.
 get_local_files_and_packages(Dir) ->
     Files = get_local_files(Dir),
-    Packages = convert_files_to_packages(Files),
+    Packages = get_packages_for_files(Files),
     {ok, Files, Packages}.
