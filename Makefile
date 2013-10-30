@@ -10,7 +10,10 @@ clean:
 clean-deps:
 	@rm -rf deps
 
-compile: clean
+compile:
+	$(REBAR) compile
+
+recompile: clean
 	$(REBAR) compile
 
 deps:
@@ -24,7 +27,7 @@ run:
 
 compile-and-run: compile run
 
-recompile-and-run: clean-deps deps compile run
+recompile-and-run: clean-deps deps recompile run
 
 # make run-node node_name=eppi01
 # make run-node node_name=eppi02 config_file=tests/eppi
