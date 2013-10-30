@@ -88,7 +88,7 @@ dispatch_rules() ->
             static("js"),
             static("fonts"),
             static("img"),
-            {"/api/v1/", eppi_http_api, []},
+            {"/simple/[:package/[:file]]", eppi_http_simple, []},
             {"/", cowboy_static, [
                 {directory, {priv_dir, eppi, [?EPPI_STATIC]}},
                 {file, <<"index.html">>},
