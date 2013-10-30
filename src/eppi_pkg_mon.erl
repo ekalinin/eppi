@@ -46,7 +46,7 @@ get_packages() ->
     gen_server:call(?SERVER, {get_packages}).
 
 check_new() ->
-    gen_server:call(?SERVER, {check_new}).
+    gen_server:cast(?SERVER, {check_new}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -93,28 +93,20 @@ handle_cast({start_server}, State) ->
                 check_period = CheckPeriod}}
     end;
 
+handle_cast({check_new}, State) ->
+    lager:info("+ Checking new files (single task)..."),
+    {ok, CurrFiles, CurrPackages} = check_new_files(State#state.files),
+    {noreply, State#state{files = CurrFiles, packages = CurrPackages}};
+
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %% @doc Check new files (periodic task)
 handle_info({check_new}, State) ->
-    lager:debug("+ Checking new files ..."),
-    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
-    {ok, CurrFiles, CurrPackage} = get_local_files_and_packages(PackagesDir),
-    PrevFiles = State#state.files,
-    % Try to get difference between files
-    case CurrFiles -- PrevFiles of
-        % No new files
-        [] ->
-            lager:debug("+ nothing new."),
-            ok;
-        % Got new files
-        NewFiles ->
-            lager:info("+ found files: ~p", [NewFiles]),
-            eppi_cluster:notify_i_have(NewFiles)
-    end,
+    lager:info("+ Checking new files (periodic task)..."),
+    {ok, CurrFiles, CurrPackages} = check_new_files(State#state.files),
     erlang:send_after(State#state.check_period, self(), {check_new}),
-    {noreply, State#state{files = CurrFiles, packages = CurrPackage}};
+    {noreply, State#state{files = CurrFiles, packages = CurrPackages}};
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -156,4 +148,20 @@ get_packages_for_files(Files) ->
 get_local_files_and_packages(Dir) ->
     Files = get_local_files(Dir),
     Packages = get_packages_for_files(Files),
+    {ok, Files, Packages}.
+
+%% @doc Check new files and sends notify about them.
+check_new_files(PrevFiles) ->
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
+    {ok, Files, Packages} = get_local_files_and_packages(PackagesDir),
+    case Files -- PrevFiles of
+        % No new files
+        [] ->
+            lager:debug("+ nothing new."),
+            ok;
+        % Got new files
+        NewFiles ->
+            lager:info("+ found files: ~p", [NewFiles]),
+            eppi_cluster:notify_i_have(NewFiles)
+    end,
     {ok, Files, Packages}.
