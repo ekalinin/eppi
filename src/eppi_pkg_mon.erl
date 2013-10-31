@@ -8,6 +8,7 @@
          get_files/1,
          get_packages/0,
          check_new/0,
+         check_new/1,
          start_link/0
         ]).
 
@@ -47,6 +48,9 @@ get_packages() ->
 
 check_new() ->
     gen_server:cast(?SERVER, {check_new}).
+
+check_new(no_cluster_cast) ->
+    gen_server:cast(?SERVER, {check_new, no_cluster_cast}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -94,9 +98,14 @@ handle_cast({start_server}, State) ->
     end;
 
 handle_cast({check_new}, State) ->
-    lager:info("+ Checking new files (single task)..."),
+    lager:info("+ Checking new files (single task, with cast)..."),
     {ok, CurrFiles, CurrPackages} = check_new_files(State#state.files),
     {noreply, State#state{files = CurrFiles, packages = CurrPackages}};
+
+handle_cast({check_new, no_cluster_cast}, State) ->
+    lager:info("+ Checking new files (single task, without cast)..."),
+    {ok, Files, Packages} = check_new_files(State#state.files, no_cluster_cast),
+    {noreply, State#state{files = Files, packages = Packages}};
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -152,8 +161,7 @@ get_local_files_and_packages(Dir) ->
 
 %% @doc Check new files and sends notify about them.
 check_new_files(PrevFiles) ->
-    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
-    {ok, Files, Packages} = get_local_files_and_packages(PackagesDir),
+    {ok, Files, Packages} = check_new_files(PrevFiles, no_cluster_cast),
     case Files -- PrevFiles of
         % No new files
         [] ->
@@ -164,4 +172,9 @@ check_new_files(PrevFiles) ->
             lager:info("+ found files: ~p", [NewFiles]),
             eppi_cluster:notify_i_have(NewFiles)
     end,
+    {ok, Files, Packages}.
+
+check_new_files(PrevFiles, no_cluster_cast) ->
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
+    {ok, Files, Packages} = get_local_files_and_packages(PackagesDir),
     {ok, Files, Packages}.

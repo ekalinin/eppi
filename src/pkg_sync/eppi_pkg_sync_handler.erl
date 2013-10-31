@@ -60,7 +60,7 @@ handle_cast({save_file, FileName, Content}, State) ->
     % write file
     ok = file:write_file(FullFileName, Content),
     lager:info("- File ~p received", [FileName]),
-    eppi_pkg_mon:check_new(),
+    eppi_pkg_mon:check_new(no_cluster_cast),
     % stop worker
     {stop, normal, State};
 
