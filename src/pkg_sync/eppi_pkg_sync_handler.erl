@@ -26,7 +26,7 @@ start_link(Args) ->
 
 init(Args) ->
     gen_server:cast(self(), Args),
-    lager:debug("- Start eppi:sync worker, args: ~p", Args),
+    lager:debug("- Start eppi:sync worker, args: ~p", [Args]),
     {ok, #state{}}.
 
 handle_call(_Request, _From, State) ->

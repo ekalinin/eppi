@@ -24,7 +24,9 @@
         % Package list
         packages = [],
         % Files monitor check interval
-        check_period = 0
+        check_period = 0,
+        % Timestamp of the last check
+        last_check_timestamp = 0
     }).
 
 %%%===================================================================
@@ -80,12 +82,16 @@ handle_cast({start_server}, State) ->
                                         [PackagesDir, CheckPeriod/1000]),
     case filelib:is_dir(PackagesDir) of
         true ->
-            {ok, Files, Packages} = get_local_files_and_packages(PackagesDir),
+            {ok, Files, Packages} = get_local_files_and_packages(),
             ok = eppi_cluster:notify_i_have(Files),
             ok = eppi_cluster:notify_what_is_yours(),
             erlang:send_after(CheckPeriod, self(), {check_new}),
             {noreply, State#state{ files = Files, packages = Packages,
-                check_period = CheckPeriod}};
+                check_period = CheckPeriod%,
+                % Dot not set first check time for fast sync
+                % nodes during adding new node to the cluster
+                %last_check_timestamp = eppi_utl:get_timestamp()
+                }};
         false ->
             lager:debug("+ Directory doesn't exists ..."),
             ok = filelib:ensure_dir(PackagesDir),
@@ -94,18 +100,20 @@ handle_cast({start_server}, State) ->
             ok = eppi_cluster:notify_what_is_yours(),
             erlang:send_after(CheckPeriod, self(), {check_new}),
             {noreply, State#state{files = [], packages = [],
-                check_period = CheckPeriod}}
+                check_period = CheckPeriod%,
+                % Dot not set first check time for fast sync
+                % nodes during adding new node to the cluster
+                %last_check_timestamp = eppi_utl:get_timestamp()
+                }}
     end;
 
 handle_cast({check_new}, State) ->
     lager:info("+ Checking new files (single task, with cast)..."),
-    {ok, CurrFiles, CurrPackages} = check_new_files(State#state.files),
-    {noreply, State#state{files = CurrFiles, packages = CurrPackages}};
+    handle_check_new(State, with_cluster_cast);
 
-handle_cast({check_new, no_cluster_cast}, State) ->
+handle_cast({check_new, false}, State) ->
     lager:info("+ Checking new files (single task, without cast)..."),
-    {ok, Files, Packages} = check_new_files(State#state.files, no_cluster_cast),
-    {noreply, State#state{files = Files, packages = Packages}};
+    handle_check_new(State, no_cluster_cast);
 
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -113,9 +121,8 @@ handle_cast(_Msg, State) ->
 %% @doc Check new files (periodic task)
 handle_info({check_new}, State) ->
     lager:info("+ Checking new files (periodic task)..."),
-    {ok, CurrFiles, CurrPackages} = check_new_files(State#state.files),
     erlang:send_after(State#state.check_period, self(), {check_new}),
-    {noreply, State#state{files = CurrFiles, packages = CurrPackages}};
+    handle_check_new(State, with_cluster_cast);
 
 handle_info(_Info, State) ->
     {noreply, State}.
@@ -154,27 +161,38 @@ get_packages_for_files(Files) ->
     lists:sort(sets:to_list(sets:from_list(Packages))).
 
 %% @doc Returns turple {ok, Files, Packages}.
-get_local_files_and_packages(Dir) ->
-    Files = get_local_files(Dir),
+get_local_files_and_packages() ->
+    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
+    Files = get_local_files(PackagesDir),
     Packages = get_packages_for_files(Files),
     {ok, Files, Packages}.
 
-%% @doc Check new files and sends notify about them.
-check_new_files(PrevFiles) ->
-    {ok, Files, Packages} = check_new_files(PrevFiles, no_cluster_cast),
-    case Files -- PrevFiles of
-        % No new files
-        [] ->
-            lager:debug("+ nothing new."),
-            ok;
-        % Got new files
-        NewFiles ->
-            lager:info("+ found files: ~p", [NewFiles]),
-            eppi_cluster:notify_i_have(NewFiles)
-    end,
-    {ok, Files, Packages}.
-
-check_new_files(PrevFiles, no_cluster_cast) ->
-    {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
-    {ok, Files, Packages} = get_local_files_and_packages(PackagesDir),
-    {ok, Files, Packages}.
+%% @doc Check new files and sends notify about them if need
+handle_check_new(State, ClusterCast) ->
+    NextAllowedTime = eppi_utl:get_allowed_timestamp(
+                        State#state.last_check_timestamp),
+    CurrTime = eppi_utl:get_timestamp(),
+    if
+        CurrTime >= NextAllowedTime ->
+            PrevFiles = State#state.files,
+            {ok, Files, Packages} = get_local_files_and_packages(),
+            case Files -- PrevFiles of
+                % No new files
+                [] ->
+                    lager:debug("+ nothing new.");
+                % Got new files
+                NewFiles ->
+                    lager:info("+ found files: ~p", [NewFiles]),
+                    if ClusterCast == with_cluster_cast ->
+                        eppi_cluster:notify_i_have(NewFiles);
+                    true ->
+                        false
+                    end
+            end,
+            {noreply, State#state{ files = Files, packages = Packages,
+                        last_check_timestamp = eppi_utl:get_timestamp()}};
+        true ->
+            lager:info("+ Too early check, try next time ..."),
+            %lager:debug("+ Last: ~p, Curr: ~p."),
+            {noreply, State}
+    end.
