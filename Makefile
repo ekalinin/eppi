@@ -61,3 +61,7 @@ tests:
 	$(REBAR) eunit skip_deps=true
 
 all: deps compile
+
+push:
+	@git tag `grep vsn src/eppi.app.src  | grep -o -P '\d{1,2}.\d{1,2}.\d{1,3}'`
+	@git push --tags origin master
