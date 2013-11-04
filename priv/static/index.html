@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>eppi :: index</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="/css/eppi.css" rel="stylesheet">
+  </head>
+  <body>
+    <!-- Wrap all page content here -->
+    <div id="wrap">
+      <!-- Fixed navbar -->
+      <div class="navbar navbar-default navbar-fixed-top">
+        <div class="container">
+          <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">eppi</a>
+          </div>
+
+          <div class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+              <li><a href="/">/home</a></li>
+              <li><a href="/simple">/simple</a></li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Begin page content -->
+      <div class="container">
+        <div class="page-header">
+          <h1>Wellcome to the eppi!</h1>
+        </div>
+        <p class="lead">eppi - erlang based python package index</p>
+        <p>This is a PyPI compatible package index.</p>
+        <p>To use this server with pip, run the the following command:
+        <pre>$ pip install -i http://127.0.0.1:7890/simple pack1 [pack2...]</pre>
+        </p>
+
+        <p> To use this server with easy_install, run the the following command:
+        <pre>$ easy_install -i http://127.0.0.1:7890/simple pack1 </pre>
+        </p>
+
+        <p>The complete list of all packages can be found via the <a
+        href="/simple">simple</a> index.</p>
+
+      </div>
+    </div>
+
+    <div id="footer">
+      <div class="container">
+        <p class="text-muted credit">
+            <a href="https://github.com/ekalinin/eppi">eppi on github</a> |
+            <a href="https://github.com/ekalinin/eppi/issues">report a problem</a> |
+            <a href="https://twitter.com/evkalinin">Eugene Kalinin</a>
+        </p>
+      </div>
+    </div>
+
+
+  </body>
+</html>
