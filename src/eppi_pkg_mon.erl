@@ -76,10 +76,12 @@ handle_call(_Request, _From, State) ->
     {reply, Reply, State}.
 
 handle_cast({start_server}, State) ->
-    {ok, CheckPeriod} = eppi_utl:get_env(new_packages_check_period),
+    {ok, CheckPeriodSecs} = eppi_utl:get_env(new_packages_check_period),
+    CheckPeriod = CheckPeriodSecs*1000,
+    {ok, Interval} = eppi_utl:get_env(min_interval_between_checks),
     {ok, PackagesDir} = eppi_utl:get_env(packages_dir),
-    lager:info("+ Starting eppi:mon server, directory: ~p, period: ~p [secs]",
-                                        [PackagesDir, CheckPeriod/1000]),
+    lager:info("+ Starting eppi:mon server, directory: ~p, period: ~p sec, min: ~p sec",
+                            [PackagesDir, CheckPeriod/1000, Interval]),
     case filelib:is_dir(PackagesDir) of
         true ->
             {ok, Files, Packages} = get_local_files_and_packages(),
@@ -190,9 +192,8 @@ handle_check_new(State, ClusterCast) ->
                     end
             end,
             {noreply, State#state{ files = Files, packages = Packages,
-                        last_check_timestamp = eppi_utl:get_timestamp()}};
+                                    last_check_timestamp = CurrTime}};
         true ->
             lager:info("+ Too early check, try next time ..."),
-            %lager:debug("+ Last: ~p, Curr: ~p."),
             {noreply, State}
     end.

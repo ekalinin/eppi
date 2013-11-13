@@ -14,8 +14,8 @@ get_env(EnvName, DefaultValue) ->
     end.
 
 get_timestamp() ->
-    {_, _Secs, MicroSecs} = now(),
-    MicroSecs.
+    {_, Secs, _} = now(),
+    Secs.
 
 get_allowed_timestamp(LastTimeStamp) ->
     {ok, Interval} = eppi_utl:get_env(min_interval_between_checks),
