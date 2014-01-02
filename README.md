@@ -13,8 +13,16 @@ Features
 Installation
 ============
 
+    $ sudo apt-get install erlang git -y
+    
+    $ git clone git://github.com/rebar/rebar.git
+    $ cd rebar
+    $ ./bootstrap
+    $ cd ..
+
     $ git clone git@github.com:ekalinin/eppi.git
     $ cd eppi
+    $ cp ../rebar/rebar .
     $ make install
 
 Usage
@@ -46,14 +54,14 @@ Coniguration
 Default config file is: `eppi.config`. It is in the root of the git repo.
 Main options:
 
-    * `pypi_url` — main pypi server (default: `pypi.python.org/simple/`)
-    * `packages_dir` — directory with packages (default: `./packages`)
-    * `http_port` — http port (default: `7890`)
+  * `pypi_url` — main pypi server (default: `pypi.python.org/simple/`)
+  * `packages_dir` — directory with packages (default: `./packages`)
+  * `http_port` — http port (default: `7890`)
 
 Dependency
 ==========
 
-    * erlang
-    * cowboy
-    * erlydtl
-    * lager
+  * erlang
+  * cowboy
+  * erlydtl
+  * lager
